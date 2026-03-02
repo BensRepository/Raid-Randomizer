@@ -4,29 +4,29 @@ import net.runelite.client.config.Config;
 import net.runelite.client.config.ConfigGroup;
 import net.runelite.client.config.ConfigItem;
 
-@ConfigGroup("raidroulette")
+@ConfigGroup("raid randomizer")
 public interface ExampleConfig extends Config
 {
 	@ConfigItem(
 			keyName = "enableCox",
-			name = "Enable Cox",
-			description = "Show Chambers of Xeric result",
+			name = "Chambers of Xeric",
+			description = "adds Chambers of Xeric to results",
 			position = 0
 	)
 	default boolean enableCox() { return true; }
 
 	@ConfigItem(
 			keyName = "enableTob",
-			name = "Enable ToB",
-			description = "Show Theatre of Blood result",
+			name = "Theatre of Blood",
+			description = "adds Theatre of Blood to results",
 			position = 1
 	)
 	default boolean enableTob() { return true; }
 
 	@ConfigItem(
 			keyName = "enableToa",
-			name = "Enable ToA",
-			description = "Show Tombs of Amascut result",
+			name = "Tombs of Amascut",
+			description = "adds Tombs of Amascut to results",
 			position = 2
 	)
 	default boolean enableToa() { return true; }
@@ -34,8 +34,8 @@ public interface ExampleConfig extends Config
 	// 🕒 UTC sync (deterministic)
 	@ConfigItem(
 			keyName = "useUtcSync",
-			name = "Use UTC sync",
-			description = "Deterministic roll across clients (all raids)",
+			name = "Sync results",
+			description = "Shows same result for all players with the plugin (all raids enabled)",
 			position = 3
 	)
 	default boolean useUtcSync()

@@ -16,15 +16,12 @@ import net.runelite.client.plugins.PluginDescriptor;
 
 import javax.inject.Inject;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Random;
+import java.util.*;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 @Slf4j
-@PluginDescriptor(name = "Raid Roulette")
+@PluginDescriptor(name = "Raid Randomizer")
 public class ExamplePlugin extends Plugin
 {
 	@Inject private Client client;
@@ -47,8 +44,17 @@ public class ExamplePlugin extends Plugin
 	@Subscribe
 	public void onChatMessage(ChatMessage event)
 	{
-		if (event.getType() != ChatMessageType.PUBLICCHAT)
+		ChatMessageType type = event.getType();
+
+		// Allow public, clan, friends chat, and BOTH private types
+		if (type != ChatMessageType.PUBLICCHAT &&
+				type != ChatMessageType.CLAN_CHAT &&
+				type != ChatMessageType.FRIENDSCHAT &&
+				type != ChatMessageType.PRIVATECHAT &&
+				type != ChatMessageType.PRIVATECHATOUT)
+		{
 			return;
+		}
 
 		if (!"!raid".equalsIgnoreCase(event.getMessage()))
 			return;
@@ -59,7 +65,6 @@ public class ExamplePlugin extends Plugin
 		spinning = true;
 
 		MessageNode node = event.getMessageNode();
-
 		List<String> available = getAvailableRaids();
 
 		if (available.isEmpty())
@@ -73,7 +78,6 @@ public class ExamplePlugin extends Plugin
 		int totalSpins = 28;
 		long accumulatedDelay = 0;
 
-		// 🎰 Accelerating spin
 		for (int i = 0; i < totalSpins; i++)
 		{
 			int base = config.spinSpeed() == ExampleConfig.SpinSpeed.FAST ? 5
@@ -108,7 +112,7 @@ public class ExamplePlugin extends Plugin
 			);
 		}
 
-		// 😈 Fake near miss
+		// Near miss
 		accumulatedDelay += 300;
 		executor.schedule(() ->
 						clientThread.invoke(() ->
@@ -122,7 +126,7 @@ public class ExamplePlugin extends Plugin
 				TimeUnit.MILLISECONDS
 		);
 
-		// 🎉 Final reveal
+		// Final reveal
 		accumulatedDelay += 600;
 		executor.schedule(() ->
 						clientThread.invoke(() ->
@@ -174,7 +178,11 @@ public class ExamplePlugin extends Plugin
 
 		if (config.useUtcSync())
 		{
-			pool = Arrays.asList("Chambers of Xeric", "Theatre of Blood", "Tombs of Amascut");
+			pool = Arrays.asList(
+					"Chambers of Xeric",
+					"Theatre of Blood",
+					"Tombs of Amascut"
+			);
 		}
 		else
 		{
