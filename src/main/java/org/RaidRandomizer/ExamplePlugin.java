@@ -8,6 +8,7 @@ import net.runelite.api.GameState;
 import net.runelite.api.MessageNode;
 import net.runelite.api.events.ChatMessage;
 import net.runelite.api.events.GameStateChanged;
+import net.runelite.client.callback.ClientThread;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.plugins.Plugin;
@@ -16,30 +17,29 @@ import net.runelite.client.plugins.PluginDescriptor;
 import javax.inject.Inject;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 @Slf4j
-@PluginDescriptor(
-		name = "Raid Randomizer"
-)
+@PluginDescriptor(name = "Raid Roulette")
 public class ExamplePlugin extends Plugin
 {
-	@Inject
-	private Client client;
+	@Inject private Client client;
+	@Inject private ClientThread clientThread;
+	@Inject private ScheduledExecutorService executor;
+	@Inject private ExampleConfig config;
+	@Inject private RaidIconManager raidIconManager;
 
-	@Inject
-	private ExampleConfig config;
-
-	@Inject
-	private RaidIconManager raidIconManager;
+	private boolean spinning = false;
 
 	@Subscribe
 	public void onGameStateChanged(GameStateChanged event)
 	{
 		if (event.getGameState() == GameState.LOGGED_IN)
 		{
-			log.info("Game logged in → loading raid icons");
 			raidIconManager.load();
 		}
 	}
@@ -48,76 +48,160 @@ public class ExamplePlugin extends Plugin
 	public void onChatMessage(ChatMessage event)
 	{
 		if (event.getType() != ChatMessageType.PUBLICCHAT)
-		{
 			return;
-		}
 
-		String message = event.getMessage();
-		if (message == null || !message.equalsIgnoreCase("!raid"))
-		{
+		if (!"!raid".equalsIgnoreCase(event.getMessage()))
 			return;
-		}
 
-		String result = rollRaid();
-		if (result == null)
-		{
+		if (spinning)
 			return;
-		}
+
+		spinning = true;
 
 		MessageNode node = event.getMessageNode();
-		node.setRuneLiteFormatMessage(result);
-		client.refreshChat();
+
+		List<String> available = getAvailableRaids();
+
+		if (available.isEmpty())
+		{
+			node.setRuneLiteFormatMessage("<col=ffffff>No raids enabled</col>");
+			client.refreshChat();
+			spinning = false;
+			return;
+		}
+
+		int totalSpins = 28;
+		long accumulatedDelay = 0;
+
+		// 🎰 Accelerating spin
+		for (int i = 0; i < totalSpins; i++)
+		{
+			int base = config.spinSpeed() == ExampleConfig.SpinSpeed.FAST ? 5
+					: config.spinSpeed() == ExampleConfig.SpinSpeed.SLOW ? 70
+					: 35;
+
+			double progress = (double) i / totalSpins;
+			long delayStep = (long) (base + (progress * base * 3));
+
+			accumulatedDelay += delayStep;
+
+			int index = i;
+			long scheduledTime = accumulatedDelay;
+
+			executor.schedule(() ->
+							clientThread.invoke(() ->
+							{
+								String name = available.get(index % available.size());
+
+								node.setRuneLiteFormatMessage(
+										"<col=ffff00>🎰 " + name + "</col>"
+								);
+								client.refreshChat();
+
+								if (config.enableSounds())
+								{
+									client.playSoundEffect(227);
+								}
+							}),
+					scheduledTime,
+					TimeUnit.MILLISECONDS
+			);
+		}
+
+		// 😈 Fake near miss
+		accumulatedDelay += 300;
+		executor.schedule(() ->
+						clientThread.invoke(() ->
+						{
+							node.setRuneLiteFormatMessage(
+									"<col=ff0000>🎰 " + available.get(0) + "</col>"
+							);
+							client.refreshChat();
+						}),
+				accumulatedDelay,
+				TimeUnit.MILLISECONDS
+		);
+
+		// 🎉 Final reveal
+		accumulatedDelay += 600;
+		executor.schedule(() ->
+						clientThread.invoke(() ->
+						{
+							String result = rollRaid();
+
+							if (config.enableSounds())
+							{
+								client.playSoundEffect(199);
+							}
+
+							node.setRuneLiteFormatMessage("<col=00ff00>" + result + "</col>");
+							client.refreshChat();
+							spinning = false;
+						}),
+				accumulatedDelay,
+				TimeUnit.MILLISECONDS
+		);
 	}
 
-	/**
-	 * UTC epoch seconds from system clock (no API).
-	 */
+	private List<String> getAvailableRaids()
+	{
+		List<String> list = new ArrayList<>();
+
+		if (config.useUtcSync())
+		{
+			list.add("Chambers of Xeric");
+			list.add("Theatre of Blood");
+			list.add("Tombs of Amascut");
+		}
+		else
+		{
+			if (config.enableCox()) list.add("Chambers of Xeric");
+			if (config.enableTob()) list.add("Theatre of Blood");
+			if (config.enableToa()) list.add("Tombs of Amascut");
+		}
+
+		return list;
+	}
+
 	private long getUtcEpoch()
 	{
 		return Instant.now().getEpochSecond();
 	}
 
-	/**
-	 * Deterministic raid selection using 2-second UTC bucket.
-	 */
 	private String rollRaid()
 	{
-		long utc = getUtcEpoch();
-		if (utc < 0)
+		List<String> pool;
+
+		if (config.useUtcSync())
 		{
-			return "<col=ffffff>Time unavailable</col>";
+			pool = Arrays.asList("Chambers of Xeric", "Theatre of Blood", "Tombs of Amascut");
+		}
+		else
+		{
+			pool = getAvailableRaids();
 		}
 
-		// 2-second bucket shared across all clients with synced clocks
-		long bucket = utc / 2;
+		if (pool.isEmpty())
+		{
+			return "<col=ffffff>No raids enabled</col>";
+		}
 
+		long bucket = getUtcEpoch() / 2;
 		int seed = Long.hashCode(bucket);
 		Random random = new Random(seed);
 
-		List<String> allRaids = new ArrayList<>();
-		allRaids.add("COX");
-		allRaids.add("TOB");
-		allRaids.add("TOA");
-
-		String selected = allRaids.get(random.nextInt(allRaids.size()));
+		String selected = pool.get(random.nextInt(pool.size()));
 
 		switch (selected)
 		{
-			case "COX":
-				return config.enableCox()
-						? "<img=" + raidIconManager.getCoxChatIndex() + "> <col=00ff00>Chambers of Xeric</col>"
-						: "<col=ffffff>Chambers of Xeric (disabled)</col>";
+			case "Chambers of Xeric":
+				return "<img=" + raidIconManager.getCoxChatIndex() + "> <col=00ff00>Chambers of Xeric</col>";
 
-			case "TOB":
-				return config.enableTob()
-						? "<img=" + raidIconManager.getTobChatIndex() + "> <col=ff0000>Theatre of Blood</col>"
-						: "<col=ffffff>Theatre of Blood (disabled)</col>";
+			case "Theatre of Blood":
+				return "<img=" + raidIconManager.getTobChatIndex() + "> <col=ff0000>Theatre of Blood</col>";
 
-			case "TOA":
 			default:
-				return config.enableToa()
-						? "<img=" + raidIconManager.getToaChatIndex() + "> <col=cc6600>Tombs of Amascut</col>"
-						: "<col=ffffff>Tombs of Amascut (disabled)</col>";
+				return "<img=" + raidIconManager.getToaChatIndex() + "> <col=cc6600>Tombs of Amascut</col>";
 		}
 	}
 

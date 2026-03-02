@@ -4,46 +4,73 @@ import net.runelite.client.config.Config;
 import net.runelite.client.config.ConfigGroup;
 import net.runelite.client.config.ConfigItem;
 
-@ConfigGroup("raidrandomizer")
+@ConfigGroup("raidroulette")
 public interface ExampleConfig extends Config
 {
 	@ConfigItem(
 			keyName = "enableCox",
-			name = "Enable Chambers of Xeric",
-			description = "Include Chambers of Xeric in the raid randomizer"
+			name = "Enable Cox",
+			description = "Show Chambers of Xeric result",
+			position = 0
 	)
-	default boolean enableCox()
-	{
-		return true;
-	}
+	default boolean enableCox() { return true; }
 
 	@ConfigItem(
 			keyName = "enableTob",
-			name = "Enable Theatre of Blood",
-			description = "Include Theatre of Blood in the raid randomizer"
+			name = "Enable ToB",
+			description = "Show Theatre of Blood result",
+			position = 1
 	)
-	default boolean enableTob()
-	{
-		return true;
-	}
+	default boolean enableTob() { return true; }
 
 	@ConfigItem(
 			keyName = "enableToa",
-			name = "Enable Tombs of Amascut",
-			description = "Include Tombs of Amascut in the raid randomizer"
+			name = "Enable ToA",
+			description = "Show Tombs of Amascut result",
+			position = 2
 	)
-	default boolean enableToa()
+	default boolean enableToa() { return true; }
+
+	// 🕒 UTC sync (deterministic)
+	@ConfigItem(
+			keyName = "useUtcSync",
+			name = "Use UTC sync",
+			description = "Deterministic roll across clients (all raids)",
+			position = 3
+	)
+	default boolean useUtcSync()
 	{
 		return true;
 	}
 
-	@ConfigItem(
-			keyName = "deterministic",
-			name = "Sync results",
-			description = "If enabled, players with the plugin will see the same result. (All raids are rolled)."
-	)
-	default boolean deterministic()
+	// 🎚 Speed dropdown
+	enum SpinSpeed
 	{
-		return false;
+		FAST,
+		MEDIUM,
+		SLOW
+	}
+
+	@ConfigItem(
+			keyName = "spinSpeed",
+			name = "Spin speed",
+			description = "Roulette speed",
+			position = 4
+	)
+	default SpinSpeed spinSpeed()
+	{
+		return SpinSpeed.MEDIUM;
+	}
+
+	// 🔊 Sound toggle
+	@ConfigItem(
+			keyName = "enableSounds",
+			name = "Enable sounds",
+			description = "Play drum and reveal sounds",
+			position = 5
+	)
+	default boolean enableSounds()
+	{
+		return true;
 	}
 }
