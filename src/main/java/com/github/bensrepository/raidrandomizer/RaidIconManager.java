@@ -1,4 +1,4 @@
-package org.RaidRandomizer;
+package com.github.bensrepository.raidrandomizer;
 
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;

@@ -1,16 +1,16 @@
-package org.RaidRandomizer;
+package com.github.bensrepository.raidrandomizer;
 
 import net.runelite.client.config.Config;
 import net.runelite.client.config.ConfigGroup;
 import net.runelite.client.config.ConfigItem;
 
-@ConfigGroup("raid randomizer")
-public interface ExampleConfig extends Config
+@ConfigGroup("raidrandomizer")
+public interface RaidRandomizerConfig extends Config
 {
 	@ConfigItem(
 			keyName = "enableCox",
 			name = "Chambers of Xeric",
-			description = "adds Chambers of Xeric to results",
+			description = "Adds Chambers of Xeric to results.",
 			position = 0
 	)
 	default boolean enableCox() { return true; }
@@ -18,7 +18,7 @@ public interface ExampleConfig extends Config
 	@ConfigItem(
 			keyName = "enableTob",
 			name = "Theatre of Blood",
-			description = "adds Theatre of Blood to results",
+			description = "Adds Theatre of Blood to results.",
 			position = 1
 	)
 	default boolean enableTob() { return true; }
@@ -26,7 +26,7 @@ public interface ExampleConfig extends Config
 	@ConfigItem(
 			keyName = "enableToa",
 			name = "Tombs of Amascut",
-			description = "adds Tombs of Amascut to results",
+			description = "Adds Tombs of Amascut to results.",
 			position = 2
 	)
 	default boolean enableToa() { return true; }

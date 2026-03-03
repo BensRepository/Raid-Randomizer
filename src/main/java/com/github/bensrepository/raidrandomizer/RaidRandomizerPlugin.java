@@ -1,4 +1,4 @@
-package org.RaidRandomizer;
+package com.github.bensrepository.raidrandomizer;
 
 import com.google.inject.Provides;
 import lombok.extern.slf4j.Slf4j;
@@ -21,13 +21,18 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 @Slf4j
-@PluginDescriptor(name = "Raid Randomizer")
-public class ExamplePlugin extends Plugin
+@PluginDescriptor(
+		name = "Raid Randomizer",
+		description = "Randomize the next raid you and your friends take on.",
+		tags = {"raid", "randomizer", "utility"},
+		enabledByDefault = false
+)
+public class RaidRandomizerPlugin extends Plugin
 {
 	@Inject private Client client;
 	@Inject private ClientThread clientThread;
 	@Inject private ScheduledExecutorService executor;
-	@Inject private ExampleConfig config;
+	@Inject private RaidRandomizerConfig config;
 	@Inject private RaidIconManager raidIconManager;
 
 	@Subscribe
@@ -74,8 +79,8 @@ public class ExamplePlugin extends Plugin
 
 		for (int i = 0; i < totalSpins; i++)
 		{
-			int base = config.spinSpeed() == ExampleConfig.SpinSpeed.FAST ? 5
-					: config.spinSpeed() == ExampleConfig.SpinSpeed.SLOW ? 70
+			int base = config.spinSpeed() == RaidRandomizerConfig.SpinSpeed.FAST ? 5
+					: config.spinSpeed() == RaidRandomizerConfig.SpinSpeed.SLOW ? 70
 					: 35;
 
 			double progress = (double) i / totalSpins;
@@ -198,8 +203,8 @@ public class ExamplePlugin extends Plugin
 	}
 
 	@Provides
-	ExampleConfig provideConfig(ConfigManager configManager)
+	RaidRandomizerConfig provideConfig(ConfigManager configManager)
 	{
-		return configManager.getConfig(ExampleConfig.class);
+		return configManager.getConfig(RaidRandomizerConfig.class);
 	}
 }
