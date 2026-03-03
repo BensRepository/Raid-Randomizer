@@ -32,6 +32,9 @@ public class ExamplePlugin extends Plugin
 
 	private boolean spinning = false;
 
+	// Deterministic bucket captured at spin start
+	private long pendingBucket;
+
 	@Subscribe
 	public void onGameStateChanged(GameStateChanged event)
 	{
@@ -62,6 +65,9 @@ public class ExamplePlugin extends Plugin
 			return;
 
 		spinning = true;
+
+		// Capture deterministic bucket at spin start (4-second window)
+		pendingBucket = getUtcEpoch() / 4;
 
 		MessageNode node = event.getMessageNode();
 		List<String> available = getAvailableRaids();
@@ -125,12 +131,12 @@ public class ExamplePlugin extends Plugin
 				TimeUnit.MILLISECONDS
 		);
 
-		// Final reveal (deterministic UTC result)
+		// Final reveal (deterministic using captured bucket)
 		accumulatedDelay += 600;
 		executor.schedule(() ->
 						clientThread.invoke(() ->
 						{
-							String result = rollRaid();
+							String result = rollRaid(pendingBucket);
 
 							if (config.enableSounds())
 							{
@@ -172,11 +178,10 @@ public class ExamplePlugin extends Plugin
 	}
 
 	/**
-	 * Deterministic 4-second UTC bucket:
-	 * - all clients in same window get same result
-	 * - animation speed does not affect outcome
+	 * Deterministic raid selection using captured 4-second bucket.
+	 * Animation speed does not affect outcome.
 	 */
-	private String rollRaid()
+	private String rollRaid(long bucket)
 	{
 		List<String> pool = config.useUtcSync()
 				? Arrays.asList("Chambers of Xeric", "Theatre of Blood", "Tombs of Amascut")
@@ -186,9 +191,6 @@ public class ExamplePlugin extends Plugin
 		{
 			return "<col=ffffff>No raids enabled</col>";
 		}
-
-		// 4-second bucket (UTC)
-		long bucket = getUtcEpoch() / 4;
 
 		Random random = new Random(bucket);
 
