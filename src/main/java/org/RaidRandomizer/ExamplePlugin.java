@@ -31,6 +31,7 @@ public class ExamplePlugin extends Plugin
 	@Inject private RaidIconManager raidIconManager;
 
 	private boolean spinning = false;
+	private String pendingResult; // <--- result computed once per spin
 
 	@Subscribe
 	public void onGameStateChanged(GameStateChanged event)
@@ -46,7 +47,6 @@ public class ExamplePlugin extends Plugin
 	{
 		ChatMessageType type = event.getType();
 
-		// Allow public, clan, friends chat, and BOTH private types
 		if (type != ChatMessageType.PUBLICCHAT &&
 				type != ChatMessageType.CLAN_CHAT &&
 				type != ChatMessageType.FRIENDSCHAT &&
@@ -74,6 +74,9 @@ public class ExamplePlugin extends Plugin
 			spinning = false;
 			return;
 		}
+
+		// Compute result once so speed doesn’t affect outcome
+		pendingResult = rollRaid();
 
 		int totalSpins = 28;
 		long accumulatedDelay = 0;
@@ -126,19 +129,17 @@ public class ExamplePlugin extends Plugin
 				TimeUnit.MILLISECONDS
 		);
 
-		// Final reveal
+		// Final reveal (uses precomputed result)
 		accumulatedDelay += 600;
 		executor.schedule(() ->
 						clientThread.invoke(() ->
 						{
-							String result = rollRaid();
-
 							if (config.enableSounds())
 							{
 								client.playSoundEffect(199);
 							}
 
-							node.setRuneLiteFormatMessage("<col=00ff00>" + result + "</col>");
+							node.setRuneLiteFormatMessage("<col=00ff00>" + pendingResult + "</col>");
 							client.refreshChat();
 							spinning = false;
 						}),
