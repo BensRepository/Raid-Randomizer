@@ -24,7 +24,7 @@ import java.util.concurrent.TimeUnit;
 @PluginDescriptor(
 		name = "Raid Randomizer",
 		description = "Randomize the next raid you and your friends take on.",
-		tags = {"raid", "randomizer", "utility"},
+		tags = {"raid", "randomizer", "utility"}
 )
 public class RaidRandomizerPlugin extends Plugin
 {
