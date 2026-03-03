@@ -31,7 +31,6 @@ public class ExamplePlugin extends Plugin
 	@Inject private RaidIconManager raidIconManager;
 
 	private boolean spinning = false;
-	private String pendingResult; // <--- result computed once per spin
 
 	@Subscribe
 	public void onGameStateChanged(GameStateChanged event)
@@ -74,9 +73,6 @@ public class ExamplePlugin extends Plugin
 			spinning = false;
 			return;
 		}
-
-		// Compute result once so speed doesn’t affect outcome
-		pendingResult = rollRaid();
 
 		int totalSpins = 28;
 		long accumulatedDelay = 0;
@@ -129,17 +125,19 @@ public class ExamplePlugin extends Plugin
 				TimeUnit.MILLISECONDS
 		);
 
-		// Final reveal (uses precomputed result)
+		// Final reveal (deterministic UTC result)
 		accumulatedDelay += 600;
 		executor.schedule(() ->
 						clientThread.invoke(() ->
 						{
+							String result = rollRaid();
+
 							if (config.enableSounds())
 							{
 								client.playSoundEffect(199);
 							}
 
-							node.setRuneLiteFormatMessage("<col=00ff00>" + pendingResult + "</col>");
+							node.setRuneLiteFormatMessage("<col=00ff00>" + result + "</col>");
 							client.refreshChat();
 							spinning = false;
 						}),
@@ -173,31 +171,26 @@ public class ExamplePlugin extends Plugin
 		return Instant.now().getEpochSecond();
 	}
 
+	/**
+	 * Deterministic 4-second UTC bucket:
+	 * - all clients in same window get same result
+	 * - animation speed does not affect outcome
+	 */
 	private String rollRaid()
 	{
-		List<String> pool;
-
-		if (config.useUtcSync())
-		{
-			pool = Arrays.asList(
-					"Chambers of Xeric",
-					"Theatre of Blood",
-					"Tombs of Amascut"
-			);
-		}
-		else
-		{
-			pool = getAvailableRaids();
-		}
+		List<String> pool = config.useUtcSync()
+				? Arrays.asList("Chambers of Xeric", "Theatre of Blood", "Tombs of Amascut")
+				: getAvailableRaids();
 
 		if (pool.isEmpty())
 		{
 			return "<col=ffffff>No raids enabled</col>";
 		}
 
-		long bucket = getUtcEpoch() / 2;
-		int seed = Long.hashCode(bucket);
-		Random random = new Random(seed);
+		// 4-second bucket (UTC)
+		long bucket = getUtcEpoch() / 4;
+
+		Random random = new Random(bucket);
 
 		String selected = pool.get(random.nextInt(pool.size()));
 
