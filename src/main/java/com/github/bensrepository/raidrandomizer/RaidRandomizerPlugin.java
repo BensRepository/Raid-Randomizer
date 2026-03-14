@@ -18,6 +18,7 @@ import javax.inject.Inject;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
 @Slf4j
@@ -71,12 +72,13 @@ public class RaidRandomizerPlugin extends Plugin
 			return;
 		}
 
-		// capture deterministic bucket for THIS spin
-		long pendingBucket = getUtcEpoch() / 4;
+		// Deterministic bucket for UTC sync mode
+		long pendingBucket = getUtcBucket();
 
 		int totalSpins = 28;
 		long accumulatedDelay = 0;
 
+		//  spinning animation
 		for (int i = 0; i < totalSpins; i++)
 		{
 			int base = config.spinSpeed() == RaidRandomizerConfig.SpinSpeed.FAST ? 5
@@ -85,7 +87,6 @@ public class RaidRandomizerPlugin extends Plugin
 
 			double progress = (double) i / totalSpins;
 			long delayStep = (long) (base + (progress * base * 3));
-
 			accumulatedDelay += delayStep;
 
 			int index = i;
@@ -95,10 +96,7 @@ public class RaidRandomizerPlugin extends Plugin
 							clientThread.invoke(() ->
 							{
 								String name = available.get(index % available.size());
-
-								node.setRuneLiteFormatMessage(
-										"<col=ffff00>🎰 " + name + "</col>"
-								);
+								node.setRuneLiteFormatMessage("<col=ffff00>🎰 " + name + "</col>");
 								client.refreshChat();
 
 								if (config.enableSounds())
@@ -111,21 +109,19 @@ public class RaidRandomizerPlugin extends Plugin
 			);
 		}
 
-		// near miss
+		// Near-miss display
 		accumulatedDelay += 300;
 		executor.schedule(() ->
 						clientThread.invoke(() ->
 						{
-							node.setRuneLiteFormatMessage(
-									"<col=ff0000>🎰 " + available.get(0) + "</col>"
-							);
+							node.setRuneLiteFormatMessage("<col=ff0000>🎰 " + available.get(0) + "</col>");
 							client.refreshChat();
 						}),
 				accumulatedDelay,
 				TimeUnit.MILLISECONDS
 		);
 
-		// final reveal (deterministic, independent)
+		// Final reveal
 		accumulatedDelay += 600;
 		executor.schedule(() ->
 						clientThread.invoke(() ->
@@ -151,6 +147,7 @@ public class RaidRandomizerPlugin extends Plugin
 
 		if (config.useUtcSync())
 		{
+			// Fixed pool for deterministic syncing
 			list.add("Chambers of Xeric");
 			list.add("Theatre of Blood");
 			list.add("Tombs of Amascut");
@@ -170,33 +167,44 @@ public class RaidRandomizerPlugin extends Plugin
 		return Instant.now().getEpochSecond();
 	}
 
-	/**
-	 * Deterministic raid selection using captured 4-second bucket.
 
-	 */
+	private long getUtcBucket()
+	{
+		long epoch = getUtcEpoch();
+		return (epoch + 2) / 4; // +2 centers the bucket to tolerate ±2 seconds
+	}
+
+
 	private String rollRaid(long bucket)
 	{
-		List<String> pool = config.useUtcSync()
-				? Arrays.asList("Chambers of Xeric", "Theatre of Blood", "Tombs of Amascut")
-				: getAvailableRaids();
-
-		if (pool.isEmpty())
+		if (config.useUtcSync())
 		{
-			return "<col=ffffff>No raids enabled</col>";
+			// deterministic pool for sync mode
+			List<String> pool = Arrays.asList("Chambers of Xeric", "Theatre of Blood", "Tombs of Amascut");
+			Random random = new Random(bucket);
+			String selected = pool.get(random.nextInt(pool.size()));
+			return formatRaid(selected);
 		}
+		else
+		{
+			// fully random for non-sync mode, only enabled raids
+			List<String> pool = getAvailableRaids();
+			if (pool.isEmpty())
+				return "<col=ffffff>No raids enabled</col>";
 
-		Random random = new Random(bucket);
+			String selected = pool.get(ThreadLocalRandom.current().nextInt(pool.size()));
+			return formatRaid(selected);
+		}
+	}
 
-		String selected = pool.get(random.nextInt(pool.size()));
-
+	private String formatRaid(String selected)
+	{
 		switch (selected)
 		{
 			case "Chambers of Xeric":
 				return "<img=" + raidIconManager.getCoxChatIndex() + "> <col=00ff00>Chambers of Xeric</col>";
-
 			case "Theatre of Blood":
 				return "<img=" + raidIconManager.getTobChatIndex() + "> <col=ff0000>Theatre of Blood</col>";
-
 			default:
 				return "<img=" + raidIconManager.getToaChatIndex() + "> <col=cc6600>Tombs of Amascut</col>";
 		}
