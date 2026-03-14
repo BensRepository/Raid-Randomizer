@@ -10,8 +10,6 @@ import javax.inject.Singleton;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.URL;
-import java.util.Enumeration;
 
 @Slf4j
 @Singleton
@@ -66,64 +64,27 @@ public class RaidIconManager
 
     private BufferedImage loadImage(String fileName)
     {
-        try
+        try (InputStream stream = RaidIconManager.class.getResourceAsStream(fileName))
         {
-            // Try classpath resource
-            InputStream stream = getClass().getClassLoader().getResourceAsStream(fileName);
-
             if (stream == null)
             {
-                log.warn("Resource not found via classloader: {}", fileName);
-                debugClasspathResources();
+                log.error("Resource not found: {}", fileName);
                 return null;
             }
 
             BufferedImage image = ImageIO.read(stream);
-            stream.close();
 
             if (image == null)
             {
-                log.error("ImageIO returned null for {}", fileName);
+                log.error("ImageIO failed to read {}", fileName);
             }
 
             return image;
         }
         catch (IOException e)
         {
-            log.error("Error loading image: {}", fileName, e);
+            log.error("Error loading image {}", fileName, e);
             return null;
-        }
-    }
-
-    private void debugClasspathResources()
-    {
-        try
-        {
-            Enumeration<URL> resources = getClass().getClassLoader().getResources("");
-
-            log.info("Classpath roots:");
-            while (resources.hasMoreElements())
-            {
-                URL url = resources.nextElement();
-                log.info(" - {}", url);
-            }
-
-            log.info("Searching for PNG resources...");
-
-            Enumeration<URL> pngs = getClass().getClassLoader().getResources(".");
-
-            while (pngs.hasMoreElements())
-            {
-                URL url = pngs.nextElement();
-                if (url.toString().endsWith(".png"))
-                {
-                    log.info("Found PNG: {}", url);
-                }
-            }
-        }
-        catch (IOException e)
-        {
-            log.error("Failed to debug classpath", e);
         }
     }
 
