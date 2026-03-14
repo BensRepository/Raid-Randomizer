@@ -70,9 +70,11 @@ public class RaidRandomizerPlugin extends Plugin
 			return;
 		}
 
-		// Shared deterministic bucket based on message timestamp
-		long timestampSec = node.getTimestamp() / 1000;
-		long bucket = timestampSec / 5; // 5-second sync window
+		// REAL UTC TIME — shared across all clients
+		long epochSec = System.currentTimeMillis() / 1000;
+
+		// 30-second sync window
+		long bucket = epochSec / 30;
 
 		startSpinAnimation(node, available, bucket);
 	}
@@ -153,15 +155,18 @@ public class RaidRandomizerPlugin extends Plugin
 	{
 		if (config.useUtcSync())
 		{
-			List<String> pool = Arrays.asList(
+			// Deterministic pool
+			List<String> pool = new ArrayList<>(Arrays.asList(
 					"Chambers of Xeric",
 					"Theatre of Blood",
 					"Tombs of Amascut"
-			);
+			));
 
+			// Deterministic shuffle for fair distribution
 			Random random = new Random(bucket);
-			String selected = pool.get(random.nextInt(pool.size()));
-			return formatRaid(selected);
+			Collections.shuffle(pool, random);
+
+			return formatRaid(pool.get(0));
 		}
 		else
 		{
