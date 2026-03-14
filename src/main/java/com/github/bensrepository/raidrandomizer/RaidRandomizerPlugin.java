@@ -15,7 +15,6 @@ import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
 
 import javax.inject.Inject;
-import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadLocalRandom;
@@ -58,7 +57,7 @@ public class RaidRandomizerPlugin extends Plugin
 			return;
 		}
 
-		if (!"!raid".equalsIgnoreCase(event.getMessage()))
+		if (!event.getMessage().equalsIgnoreCase("!raid"))
 			return;
 
 		MessageNode node = event.getMessageNode();
@@ -71,73 +70,11 @@ public class RaidRandomizerPlugin extends Plugin
 			return;
 		}
 
-		// Deterministic bucket for UTC sync mode
-		long pendingBucket = getUtcBucket();
+		// Shared deterministic bucket based on message timestamp
+		long timestampSec = node.getTimestamp() / 1000;
+		long bucket = timestampSec / 5; // 5-second sync window
 
-		int totalSpins = 28;
-		long accumulatedDelay = 0;
-
-		//  spinning animation
-		for (int i = 0; i < totalSpins; i++)
-		{
-			int base = config.spinSpeed() == RaidRandomizerConfig.SpinSpeed.FAST ? 5
-					: config.spinSpeed() == RaidRandomizerConfig.SpinSpeed.SLOW ? 70
-					: 35;
-
-			double progress = (double) i / totalSpins;
-			long delayStep = (long) (base + (progress * base * 3));
-			accumulatedDelay += delayStep;
-
-			int index = i;
-			long scheduledTime = accumulatedDelay;
-
-			executor.schedule(() ->
-							clientThread.invoke(() ->
-							{
-								String name = available.get(index % available.size());
-								node.setRuneLiteFormatMessage("<col=ffff00>🎰 " + name + "</col>");
-								client.refreshChat();
-
-								if (config.enableSounds())
-								{
-									client.playSoundEffect(227);
-								}
-							}),
-					scheduledTime,
-					TimeUnit.MILLISECONDS
-			);
-		}
-
-		// Near-miss display
-		accumulatedDelay += 300;
-		executor.schedule(() ->
-						clientThread.invoke(() ->
-						{
-							node.setRuneLiteFormatMessage("<col=ff0000>🎰 " + available.get(0) + "</col>");
-							client.refreshChat();
-						}),
-				accumulatedDelay,
-				TimeUnit.MILLISECONDS
-		);
-
-		// Final reveal
-		accumulatedDelay += 600;
-		executor.schedule(() ->
-						clientThread.invoke(() ->
-						{
-							String result = rollRaid(pendingBucket);
-
-							if (config.enableSounds())
-							{
-								client.playSoundEffect(199);
-							}
-
-							node.setRuneLiteFormatMessage("<col=00ff00>" + result + "</col>");
-							client.refreshChat();
-						}),
-				accumulatedDelay,
-				TimeUnit.MILLISECONDS
-		);
+		startSpinAnimation(node, available, bucket);
 	}
 
 	private List<String> getAvailableRaids()
@@ -146,7 +83,6 @@ public class RaidRandomizerPlugin extends Plugin
 
 		if (config.useUtcSync())
 		{
-			// Fixed pool for deterministic syncing
 			list.add("Chambers of Xeric");
 			list.add("Theatre of Blood");
 			list.add("Tombs of Amascut");
@@ -161,32 +97,74 @@ public class RaidRandomizerPlugin extends Plugin
 		return list;
 	}
 
-	private long getUtcEpoch()
+	private void startSpinAnimation(MessageNode node, List<String> available, long bucket)
 	{
-		return Instant.now().getEpochSecond();
+		int totalSpins = 28;
+		long accumulatedDelay = 0;
+
+		for (int i = 0; i < totalSpins; i++)
+		{
+			int base = config.spinSpeed() == RaidRandomizerConfig.SpinSpeed.FAST ? 5
+					: config.spinSpeed() == RaidRandomizerConfig.SpinSpeed.SLOW ? 70
+					: 35;
+
+			double progress = (double) i / totalSpins;
+			long delayStep = (long) (base + (progress * base * 3));
+			accumulatedDelay += delayStep;
+
+			int index = i;
+			long scheduledTime = accumulatedDelay;
+
+			executor.schedule(() ->
+							clientThread.invoke(() -> {
+								String name = available.get(index % available.size());
+								node.setRuneLiteFormatMessage("<col=ffff00>🎰 " + name + "</col>");
+								client.refreshChat();
+
+								if (config.enableSounds())
+								{
+									client.playSoundEffect(227);
+								}
+							}),
+					scheduledTime,
+					TimeUnit.MILLISECONDS
+			);
+		}
+
+		// Final reveal
+		accumulatedDelay += 600;
+		executor.schedule(() ->
+						clientThread.invoke(() -> {
+							String result = rollRaid(bucket);
+							node.setRuneLiteFormatMessage("<col=00ff00>" + result + "</col>");
+							client.refreshChat();
+
+							if (config.enableSounds())
+							{
+								client.playSoundEffect(199);
+							}
+						}),
+				accumulatedDelay,
+				TimeUnit.MILLISECONDS
+		);
 	}
-
-
-	private long getUtcBucket()
-	{
-		long epoch = getUtcEpoch();
-		return (epoch + 2) / 4; // +2 centers the bucket to tolerate ±2 seconds
-	}
-
 
 	private String rollRaid(long bucket)
 	{
 		if (config.useUtcSync())
 		{
-			// deterministic pool for sync mode
-			List<String> pool = Arrays.asList("Chambers of Xeric", "Theatre of Blood", "Tombs of Amascut");
+			List<String> pool = Arrays.asList(
+					"Chambers of Xeric",
+					"Theatre of Blood",
+					"Tombs of Amascut"
+			);
+
 			Random random = new Random(bucket);
 			String selected = pool.get(random.nextInt(pool.size()));
 			return formatRaid(selected);
 		}
 		else
 		{
-			// fully random for non-sync mode, only enabled raids
 			List<String> pool = getAvailableRaids();
 			if (pool.isEmpty())
 				return "<col=ffffff>No raids enabled</col>";
