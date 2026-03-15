@@ -64,7 +64,7 @@ public class RaidIconManager
 
     private BufferedImage loadImage(String fileName)
     {
-        try (InputStream stream = RaidIconManager.class.getResourceAsStream(fileName))
+        try (InputStream stream = RaidIconManager.class.getResourceAsStream("/" + fileName))
         {
             if (stream == null)
             {
@@ -72,14 +72,7 @@ public class RaidIconManager
                 return null;
             }
 
-            BufferedImage image = ImageIO.read(stream);
-
-            if (image == null)
-            {
-                log.error("ImageIO failed to read {}", fileName);
-            }
-
-            return image;
+            return ImageIO.read(stream);
         }
         catch (IOException e)
         {
