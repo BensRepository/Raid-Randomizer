@@ -34,7 +34,7 @@ You must enable the sync toggle in the plugin configuration if you want results 
 
 When **Sync Results** is enabled:
 
-- The plugin uses a deterministic UTC time buckets (4 seconds) 
+- The plugin uses a deterministic UTC time buckets (10 seconds) 
 - All players with sync enabled will roll the same result in that window. There is a small chance results may fall outside the bucket depending on timing.
 - If the result is identical to a previous roll, wait a bit before rolling again to allow time for a new bucket.
 - All available raids are considered in the roll when sync is active to ensure config selections wont skew results between players.
