@@ -34,14 +34,21 @@ public class RaidRandomizerPlugin extends Plugin
 	@Inject private RaidRandomizerConfig config;
 	@Inject private RaidIconManager raidIconManager;
 
+	@Override
+	protected void startUp() throws Exception
+	{
+		clientThread.invokeLater(() -> raidIconManager.load());
+	}
+
 	@Subscribe
 	public void onGameStateChanged(GameStateChanged event)
 	{
 		if (event.getGameState() == GameState.LOGGED_IN)
 		{
-			raidIconManager.load();
+			clientThread.invokeLater(() -> raidIconManager.load());
 		}
 	}
+
 
 	@Subscribe
 	public void onChatMessage(ChatMessage event)
