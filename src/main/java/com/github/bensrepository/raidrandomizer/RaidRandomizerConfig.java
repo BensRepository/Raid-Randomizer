@@ -31,12 +31,19 @@ public interface RaidRandomizerConfig extends Config
 	)
 	default boolean enableToa() { return true; }
 
+	@ConfigItem(
+			keyName = "enableTfa",
+			name = "The Fractured Archive",
+			description = "Adds Fractured Archive to results.",
+			position = 3
+	)
+	default boolean enableTfa() { return true; }
 	
 	@ConfigItem(
 			keyName = "useUtcSync",
 			name = "Sync results",
 			description = "Shows same result for all players with the plugin (all raids enabled)",
-			position = 3
+			position = 4
 	)
 	default boolean useUtcSync()
 	{
@@ -55,7 +62,7 @@ public interface RaidRandomizerConfig extends Config
 			keyName = "spinSpeed",
 			name = "Spin speed",
 			description = "Roulette speed",
-			position = 4
+			position = 5
 	)
 	default SpinSpeed spinSpeed()
 	{
@@ -67,7 +74,7 @@ public interface RaidRandomizerConfig extends Config
 			keyName = "enableSounds",
 			name = "Enable sounds",
 			description = "Play drum and reveal sounds",
-			position = 5
+			position = 6
 	)
 	default boolean enableSounds()
 	{

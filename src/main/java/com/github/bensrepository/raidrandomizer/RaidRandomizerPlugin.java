@@ -68,7 +68,17 @@ public class RaidRandomizerPlugin extends Plugin
 			return;
 
 		MessageNode node = event.getMessageNode();
-		List<String> available = getAvailableRaids();
+
+
+		// Capture seed for this spin
+		long seed = config.useUtcSync()
+				? getUtcEpoch() / 10      // 10-second deterministic bucket
+				: System.nanoTime();     // true random seed
+		List<String> available = new ArrayList<>(getAvailableRaids());
+
+// Shuffle bait animation so it’s different every time
+		Collections.shuffle(available, new Random(seed * 1337));
+
 
 		if (available.isEmpty())
 		{
@@ -76,12 +86,6 @@ public class RaidRandomizerPlugin extends Plugin
 			client.refreshChat();
 			return;
 		}
-
-		// Capture seed for this spin
-		long seed = config.useUtcSync()
-				? getUtcEpoch() / 10      // 10-second deterministic bucket
-				: System.nanoTime();     // true random seed
-
 		int totalSpins = 28;
 		long accumulatedDelay = 0;
 
@@ -163,12 +167,14 @@ public class RaidRandomizerPlugin extends Plugin
 			list.add("Chambers of Xeric");
 			list.add("Theatre of Blood");
 			list.add("Tombs of Amascut");
+			list.add("The Fractured Archive");
 		}
 		else
 		{
 			if (config.enableCox()) list.add("Chambers of Xeric");
 			if (config.enableTob()) list.add("Theatre of Blood");
 			if (config.enableToa()) list.add("Tombs of Amascut");
+			if (config.enableTfa()) list.add("The Fractured Archive");
 		}
 
 		return list;
@@ -181,33 +187,62 @@ public class RaidRandomizerPlugin extends Plugin
 
 	private String rollRaid(long seed)
 	{
+		// Build pool
 		List<String> pool = config.useUtcSync()
 				? Arrays.asList(
 				"Chambers of Xeric",
 				"Theatre of Blood",
-				"Tombs of Amascut")
+				"Tombs of Amascut",
+				"The Fractured Archive")
 				: getAvailableRaids();
 
-		if (pool.isEmpty())
-		{
-			return "<col=ffffff>No raids enabled</col>";
-		}
+		// Debug pool + seed
+		log.info("RR DEBUG: useUtcSync={}, seed={}", config.useUtcSync(), seed);
+		log.info("RR DEBUG: pool={}", pool);
 
+		// RNG
 		Random random = new Random(seed);
-		String selected = pool.get(random.nextInt(pool.size()));
 
+		int idx = Math.floorMod(Long.hashCode(seed), pool.size());
+		String selected = pool.get(idx);
+
+//		// Debug selection
+//		log.info("RR DEBUG: idx={}, selected=[{}]", idx, selected);
+//
+//		// Byte-level debugging to expose invisible characters
+//		log.info("RR DEBUG: selected bytes={}", Arrays.toString(selected.getBytes()));
+//
+//		log.info("RR DEBUG: COX bytes={}", Arrays.toString("Chambers of Xeric".getBytes()));
+//		log.info("RR DEBUG: TOB bytes={}", Arrays.toString("Theatre of Blood".getBytes()));
+//		log.info("RR DEBUG: TOA bytes={}", Arrays.toString("Tombs of Amascut".getBytes()));
+//		log.info("RR DEBUG: TFA bytes={}", Arrays.toString("The Fractured Archive".getBytes()));
+
+		// Switch with debug
 		switch (selected)
 		{
 			case "Chambers of Xeric":
+				//log.info("RR DEBUG: MATCHED CASE — COX");
 				return "<img=" + raidIconManager.getCoxChatIndex() + "> <col=00ff00>Chambers of Xeric</col>";
 
 			case "Theatre of Blood":
+				//log.info("RR DEBUG: MATCHED CASE — TOB");
 				return "<img=" + raidIconManager.getTobChatIndex() + "> <col=ff0000>Theatre of Blood</col>";
 
+			case "Tombs of Amascut":
+				//log.info("RR DEBUG: MATCHED CASE — TOA");
+				return "<img=" + raidIconManager.getToaChatIndex() + "> <col=cc6600>Tombs of Amascut</col>";
+
+			case "The Fractured Archive":
+				//log.info("RR DEBUG: MATCHED CASE — TFA");
+				return "<img=" + raidIconManager.getTfaChatIndex() + "> <col=00cc00>The Fractured Archive</col>";
+
 			default:
+				//log.info("RR DEBUG: DEFAULT CASE HIT — selected did NOT match ANY case");
 				return "<img=" + raidIconManager.getToaChatIndex() + "> <col=cc6600>Tombs of Amascut</col>";
 		}
 	}
+
+
 
 	@Provides
 	RaidRandomizerConfig provideConfig(ConfigManager configManager)

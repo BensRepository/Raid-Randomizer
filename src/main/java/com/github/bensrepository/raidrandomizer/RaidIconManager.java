@@ -27,6 +27,9 @@ public class RaidIconManager
     @Getter
     private int toaIconId;
 
+    @Getter
+    private int tfaIconId;
+
     public void load()
     {
         try
@@ -36,8 +39,9 @@ public class RaidIconManager
             coxIconId = register("cox.png");
             tobIconId = register("tob.png");
             toaIconId = register("toa.png");
+            tfaIconId = register("tfa.png");
 
-            log.info("Registered icons -> COX={}, TOB={}, TOA={}", coxIconId, tobIconId, toaIconId);
+            log.info("Registered icons -> COX={}, TOB={}, TOA={}, TFA={}", coxIconId, tobIconId, toaIconId, tfaIconId);
         }
         catch (Exception e)
         {
@@ -94,5 +98,10 @@ public class RaidIconManager
     public int getToaChatIndex()
     {
         return chatIconManager.chatIconIndex(toaIconId);
+    }
+
+    public int getTfaChatIndex()
+    {
+        return chatIconManager.chatIconIndex(tfaIconId);
     }
 }
